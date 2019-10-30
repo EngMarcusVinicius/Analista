@@ -1,0 +1,50 @@
+#!/bin/bash
+# Este script de firewall foi retirado do kurumin e pode ser usado
+# com qualquer distribuição , eu uso ele com o slackware
+# para usar no slackware basta criar um arquivo no /etc/rc.d
+# com o nome :
+# rc.firewall
+# e colar esse texto nele , então salve o rc.firewall e dê o comando :
+# chmod +x rc.firewall
+# fazendo isso o script fica executável e passa a ser executado
+# na inicialização do slackware
+
+# politica padrão
+iptables -P INPUT DROP
+iptables -P OUTPUT DROP
+iptables -P FORWARD DROP
+
+# Abre uma porta (inclusive para a Internet)
+iptables -A INPUT -p tcp --destination-port 80 -m state --state NEW,ESTABLISHED -j ACCEPT  #stateful ok
+iptables -A INPUT -p tcp --dport 389 -m state --state NEW,ESTABLISHED -j ACCEPT #stateful ok
+iptables -A INPUT -p tcp --dport 636 -m state --state NEW,ESTABLISHED -j ACCEPT #stateful ok
+#facilitando entradas com FIREWALLCMD
+firewall-cmd --add-port=10051/tcp --permanent
+firewall-cmd --add-port=10050/tcp --permanent
+firewall-cmd --add-port=3000/tcp --permanent
+firewall-cmd --permanent --zone=public --add-service=http #liberando http
+firewall-cmd --permanent --zone=public --add-service=https #liberando https
+firewall-cmd --permanent --add-service=ldap 
+
+# Ignora pings
+echo "1" > /proc/sys/net/ipv4/icmp_echo_ignore_all
+
+# Proteções diversas contra portscanners, ping of death, ataques DoS, etc.
+iptables -A FORWARD -p icmp --icmp-type echo-request -m limit --limit 1/s -j ACCEPT
+
+iptables -A FORWARD -p tcp -m limit --limit 1/s -j ACCEPT
+iptables -A FORWARD -m state --state ESTABLISHED,RELATED -j ACCEPT
+iptables -A FORWARD -p tcp --tcp-flags SYN,ACK,FIN,RST RST -m limit --limit 1/s -j ACCEPT
+iptables -A FORWARD --protocol tcp --tcp-flags ALL SYN,ACK -j DROP
+iptables -A FORWARD -m unclean -j DROP
+
+# Abre para a interface de loopback.
+# Esta regra é essencial para o KDE e outros programas gráficos
+# funcionarem adequadamente.
+iptables -A INPUT -p tcp --syn -s 127.0.0.1/255.0.0.0 -j ACCEPT
+
+# Ignora qualquer pacote de entrada, vindo de qualquer endereço, a menos que especificado o contrário acima. Bloqueia tudo.
+iptables -A INPUT -p tcp --syn -j DROP
+
+firewall-cmd --reload
+
