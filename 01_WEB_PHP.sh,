@@ -1,0 +1,86 @@
+#!/bin/bash
+
+
+#Atualizar sistema
+sudo yum update -y
+
+#Intalar Apache, PHP e MAriaDB
+
+sudo yum install epel-release httpd mariadb mariadb-server unzip wget nano -y
+
+#atualizando php
+sudo yum install https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm -y
+sudo yum install http://rpms.remirepo.net/enterprise/remi-release-7.rpm -y
+sudo yum install yum-utils -y
+sudo yum-config-manager --enable remi-php56 -y
+
+sudo yum install php php-mcrypt php-cli php-gd php-curl php-mysql php php-common php-xml php-mbstring  php-mcrypt php-xmlrpc php-ldap php-zip php-fileinfo
+
+#ativando serviços
+
+setsebool -P httpd_read_user_content 1
+sudo systemctl start httpd
+sudo systemctl start mariadb
+sudo systemctl enable httpd
+sudo systemctl enable mariadb
+
+sudo mysql_secure_installation 
+#criar banco de dados
+mysql -u root -p
+
+#Instalar e configurar o WordPress
+#Para obterem a última versão do Wordpress executem o seguinte comando:
+
+wget http://wordpress.org/latest.tar.gz
+
+#Em seguida descompactem:
+
+tar -xzvf latest.tar.gz
+
+#Copiem agora o diretório do wordpress para o diretório de raíz do Apache
+
+sudo cp -avr wordpress/* /var/www/html/
+
+#Devem ainda criar um diretório para upload de ficheiros
+
+sudo mkdir /var/www/html/wp-content/uploads
+
+#E por fim, definam as respetivas permissões
+
+sudo chown -R apache:apache /var/www/html/
+sudo chmod -R 755 /var/www/html/
+#*
+#O próximo passo é indicar os parâmetros de acesso  à base de dados.
+#Para tal podemos fazer uso do ficheiro wp-config-sample.php para
+#definirmos toda a nossa configuração. Vamos então criar o ficheiro
+#wp-config.php com base no ficheiro wp-config-sample.php
+
+cd /var/www/html/
+sudo cp wp-config-sample.php wp-config.php
+
+echo ADCIONAR define('FS_METHOD', 'direct');
+read #pausa
+sudo nano wp-config.php
+
+ausearch -c 'httpd' --raw | audit2allow -M my-httpd
+semodule -i my-httpd.pp
+/sbin/restorecon -v /var/www/html/wp-content/upgrade/ldap-login-for
+
+#ADCIONAR define('FS_METHOD', 'direct');
+
+
+
+
+#liberando firewall
+
+sudo firewall-cmd --permanent --zone=public --add-service=http
+sudo firewall-cmd --permanent --zone=public --add-service=https
+sudo firewall-cmd --reload
+setsebool -P httpd_unified 1
+setsebool -P httpd_can_sendmail=1
+ausearch -c 'httpd' --raw | audit2allow -M my-httpd
+semodule -i my-httpd.pp
+
+
+
+#se necessario usar setenforce 0
