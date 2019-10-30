@@ -1,0 +1,17 @@
+#!/bin/bash
+yum -y install epel-release
+yum install -y phpldapadmin
+
+nano /etc/httpd/conf.d/phpldapadmin.conf 
+systemctl restart httpd.service
+
+
+firewall-cmd --permanent --zone=public --add-service=http
+firewall-cmd --reload
+
+sudo vim /etc/phpldapadmin/config.php
+
+setsebool -P httpd_can_connect_ldap on
+systemctl restart httpd.service
+systemctl enable slapd
+systemctl start slapd
