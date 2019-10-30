@@ -1,0 +1,13 @@
+#!/bin/bash
+sudo yum install httpd -y
+sudo systemctl enable httpd && sudo systemctl start httpd
+firewall-cmd --add-service=http --permanent
+firewall-cmd --reload
+
+sudo vim /etc/httpd/conf/httpd.conf
+
+
+
+sudo systemctl restart httpd
+
+
