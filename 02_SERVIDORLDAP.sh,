@@ -1,0 +1,63 @@
+#!/bin/bash
+ausearch -c 'httpd' --raw | audit2allow -M my-httpd
+semodule -i my-httpd.pp
+sudo yum update
+
+
+#instalando ldap
+
+sudo yum install openldap compat-openldap openldap-clients openldap-servers openldap-servers-sql openldap-devel
+
+#INICIANDO SERVIÇOS
+
+systemctl enable slapd
+systemctl start slapd
+setsebool -P httpd_can_network_connect 1
+
+slappasswd -h {SSHA} -s 123
+
+echo COPIAR CHAVE GERADA
+
+read #pausa
+#EDITAR ARQUIVO PARA 
+
+nano conf.ldif
+
+#IMPORTANDO ARQUIVO CONFIG
+
+ldapmodify -Y EXTERNAL -H ldapi:/// -f conf.ldif
+
+#GERANDOBD
+
+cp /usr/share/openldap-servers/DB_CONFIG.example /var/lib/ldap/DB_CONFIG
+chown ldap:ldap /var/lib/ldap/*
+
+#ADICIONANDO ESQUEMAS
+ldapadd -Y EXTERNAL -H ldapi:/// -f /etc/openldap/schema/cosine.ldif
+ldapadd -Y EXTERNAL -H ldapi:/// -f /etc/openldap/schema/nis.ldif
+ldapadd -Y EXTERNAL -H ldapi:/// -f /etc/openldap/schema/inetorgperson.ldif
+
+#CRIARBASEDEDADOS
+
+nano base.ldif
+
+#CRIAR ESTRUTURA
+ldapadd -x -W -D "cn=marcus,dc=marcus,dc=analista" -f base.ldif
+
+#CRIANDO NOVO USUÁRIO
+
+nano novousuario.ldif
+
+ldapadd -x -W -D "cn=marcus,dc=marcus,dc=analista" -f novousuario.ldif
+#NOVA SENHA
+
+ldappasswd -s 123 -W -D "cn=marcus,dc=marcus,dc=analista" -x "uid=Joao,ou=users,dc=marcus,dc=analista"
+
+firewall-cmd --permanent --add-service=ldap
+firewall-cmd --reload
+iptables -A INPUT -p tcp --dport 389 -j ACCEPT
+iptables -A INPUT -p tcp --dport 636 -j ACCEPT
+
+#TESTE SERVIDOR
+
+ldapsearch -x cn=Joao -b dc=marcus,dc=analista
